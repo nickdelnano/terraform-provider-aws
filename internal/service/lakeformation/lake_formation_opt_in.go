@@ -2,23 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 package lakeformation
-// **PLEASE DELETE THIS AND ALL TIP COMMENTS BEFORE SUBMITTING A PR FOR REVIEW!**
-//
-// TIP: ==== INTRODUCTION ====
-// Thank you for trying the skaff tool!
-//
-// You have opted to include these helpful comments. They all include "TIP:"
-// to help you find and remove them when you're done with them.
-//
-// While some aspects of this file are customized to your input, the
-// scaffold tool does *not* look at the AWS API and ensure it has correct
-// function, structure, and variable names. It makes guesses based on
-// commonalities. You will need to make significant adjustments.
-//
-// In other words, as generated, this is a rough outline of the work you will
-// need to do. If something doesn't make sense for your situation, get rid of
-// it.
-
 import (
 	// TIP: ==== IMPORTS ====
 	// This is a common set of imports but not customized to your code since
@@ -71,14 +54,7 @@ import (
 // @FrameworkResource("aws_lakeformation_lake_formation_opt_in", name="Lake Formation Opt In")
 func newResourceLakeFormationOptIn(_ context.Context) (resource.ResourceWithConfigure, error) {
 	r := &resourceLakeFormationOptIn{}
-	
-	// TIP: ==== CONFIGURABLE TIMEOUTS ====
-	// Users can configure timeout lengths but you need to use the times they
-	// provide. Access the timeout they configure (or the defaults) using,
-	// e.g., r.CreateTimeout(ctx, plan.Timeouts) (see below). The times here are
-	// the defaults if they don't configure timeouts.
 	r.SetDefaultCreateTimeout(30 * time.Minute)
-	r.SetDefaultUpdateTimeout(30 * time.Minute)
 	r.SetDefaultDeleteTimeout(30 * time.Minute)
 
 	return r, nil
@@ -91,6 +67,7 @@ const (
 type resourceLakeFormationOptIn struct {
 	framework.ResourceWithConfigure
 	framework.WithTimeouts
+	framework.WithNoUpdate
 }
 
 func (r *resourceLakeFormationOptIn) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -332,89 +309,6 @@ func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.Read
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *resourceLakeFormationOptIn) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// TIP: ==== RESOURCE UPDATE ====
-	// Not all resources have Update functions. There are a few reasons:
-	// a. The AWS API does not support changing a resource
-	// b. All arguments have RequiresReplace() plan modifiers
-	// c. The AWS API uses a create call to modify an existing resource
-	//
-	// In the cases of a. and b., the resource will not have an update method
-	// defined. In the case of c., Update and Create can be refactored to call
-	// the same underlying function.
-	//
-	// The rest of the time, there should be an Update function and it should
-	// do the following things. Make sure there is a good reason if you don't
-	// do one of these.
-	//
-	// 1. Get a client connection to the relevant service
-	// 2. Fetch the plan and state
-	// 3. Populate a modify input structure and check for changes
-	// 4. Call the AWS modify/update function
-	// 5. Use a waiter to wait for update to complete
-	// 6. Save the request plan to response state
-	// TIP: -- 1. Get a client connection to the relevant service
-	conn := r.Meta().LakeFormationClient(ctx)
-	
-	// TIP: -- 2. Fetch the plan
-	var plan, state resourceLakeFormationOptInModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	
-	// TIP: -- 3. Populate a modify input structure and check for changes
-	if !plan.Name.Equal(state.Name) ||
-		!plan.Description.Equal(state.Description) ||
-		!plan.ComplexArgument.Equal(state.ComplexArgument) ||
-		!plan.Type.Equal(state.Type) {
-
-		var input lakeformation.UpdateLakeFormationOptInInput
-		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input, flex.WithFieldNamePrefix("Test"))...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		
-		// TIP: -- 4. Call the AWS modify/update function
-		out, err := conn.UpdateLakeFormationOptIn(ctx, &input)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				create.ProblemStandardMessage(names.LakeFormation, create.ErrActionUpdating, ResNameLakeFormationOptIn, plan.ID.String(), err),
-				err.Error(),
-			)
-			return
-		}
-		if out == nil || out.LakeFormationOptIn == nil {
-			resp.Diagnostics.AddError(
-				create.ProblemStandardMessage(names.LakeFormation, create.ErrActionUpdating, ResNameLakeFormationOptIn, plan.ID.String(), nil),
-				errors.New("empty output").Error(),
-			)
-			return
-		}
-		
-		// TIP: Using the output from the update function, re-set any computed attributes
-		resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// TIP: -- 5. Use a waiter to wait for update to complete
-	updateTimeout := r.UpdateTimeout(ctx, plan.Timeouts)
-	_, err := waitLakeFormationOptInUpdated(ctx, conn, plan.ID.ValueString(), updateTimeout)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForUpdate, ResNameLakeFormationOptIn, plan.ID.String(), err),
-			err.Error(),
-		)
-		return
-	}
-
-	// TIP: -- 6. Save the request plan to response state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-}
-
 func (r *resourceLakeFormationOptIn) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// TIP: ==== RESOURCE DELETE ====
 	// Most resources have Delete functions. There are rare situations
@@ -635,15 +529,9 @@ func findLakeFormationOptInByID(ctx context.Context, conn *lakeformation.Client,
 // https://developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values
 type resourceLakeFormationOptInModel struct {
 	ARN             types.String                                          `tfsdk:"arn"`
-	ComplexArgument fwtypes.ListNestedObjectValueOf[complexArgumentModel] `tfsdk:"complex_argument"`
 	Description     types.String                                          `tfsdk:"description"`
 	ID              types.String                                          `tfsdk:"id"`
 	Name            types.String                                          `tfsdk:"name"`
 	Timeouts        timeouts.Value                                        `tfsdk:"timeouts"`
 	Type            types.String                                          `tfsdk:"type"`
-}
-
-type complexArgumentModel struct {
-	NestedRequired types.String `tfsdk:"nested_required"`
-	NestedOptional types.String `tfsdk:"nested_optional"`
 }
