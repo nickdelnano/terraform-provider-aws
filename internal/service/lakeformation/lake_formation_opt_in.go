@@ -527,11 +527,27 @@ func findLakeFormationOptInByID(ctx context.Context, conn *lakeformation.Client,
 //
 // See more:
 // https://developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values
-type resourceLakeFormationOptInModel struct {
-	ARN             types.String                                          `tfsdk:"arn"`
-	Description     types.String                                          `tfsdk:"description"`
+type ResourceLakeFormationOptInModel struct {
+	CatalogID        types.String                                      `tfsdk:"catalog_id"`
+	Database         fwtypes.ListNestedObjectValueOf[Database]         `tfsdk:"database"`
 	ID              types.String                                          `tfsdk:"id"`
-	Name            types.String                                          `tfsdk:"name"`
+	Table            fwtypes.ListNestedObjectValueOf[table]            `tfsdk:"table"`
+	Principal              types.String                                          `tfsdk:"principal"`
 	Timeouts        timeouts.Value                                        `tfsdk:"timeouts"`
-	Type            types.String                                          `tfsdk:"type"`
+}
+
+type Database struct {
+	CatalogID types.String `tfsdk:"catalog_id"`
+	Name      types.String `tfsdk:"name"`
+}
+
+type table struct {
+	CatalogID    types.String `tfsdk:"catalog_id"`
+	DatabaseName types.String `tfsdk:"database_name"`
+	Name         types.String `tfsdk:"name"`
+	Wildcard     types.Bool   `tfsdk:"wildcard"`
+}
+
+type table principal {
+	DataLakePrincipalIdentifier types.String `tfsdk:"name"`
 }
