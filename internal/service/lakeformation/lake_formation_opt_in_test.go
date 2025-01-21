@@ -305,27 +305,9 @@ func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.Des
 
 func testAccLakeFormationOptInConfig_basic(rName, version string) string {
 	return fmt.Sprintf(`
-resource "aws_security_group" "test" {
-  name = %[1]q
-}
-
 resource "aws_lakeformation_lake_formation_opt_in" "test" {
-  lake_formation_opt_in_name             = %[1]q
-  engine_type             = "ActiveLakeFormation"
-  engine_version          = %[2]q
-  host_instance_type      = "lakeformation.t2.micro"
-  security_groups         = [aws_security_group.test.id]
-  authentication_strategy = "simple"
-  storage_type            = "efs"
-
-  logs {
-    general = true
-  }
-
-  user {
-    username = "Test"
-    password = "TestTest1234"
-  }
+  principal     = "arn:aws:iam::123456789012:role/S3Access"
+  database_name = "foo"
 }
 `, rName, version)
 }
