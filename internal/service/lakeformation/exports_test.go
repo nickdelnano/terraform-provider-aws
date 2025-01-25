@@ -8,9 +8,10 @@ var (
 	ResourceDataCellsFilter = newResourceDataCellsFilter
 	ResourceResourceLFTag   = newResourceResourceLFTag
 
-	FindDataCellsFilterByID = findDataCellsFilterByID
-	FindResourceLFTagByID   = findResourceLFTagByID
-	LFTagParseResourceID    = lfTagParseResourceID
+	FindDataCellsFilterByID    = findDataCellsFilterByID
+	FindResourceLFTagByID      = findResourceLFTagByID
+	FindLakeFormationOptInByID = findResourceLFTagByID
+	LFTagParseResourceID       = lfTagParseResourceID
 
 	ValidPrincipal = validPrincipal
 )

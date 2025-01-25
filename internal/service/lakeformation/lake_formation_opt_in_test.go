@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 package lakeformation_test
+
 // **PLEASE DELETE THIS AND ALL TIP COMMENTS BEFORE SUBMITTING A PR FOR REVIEW!**
 //
 // TIP: ==== INTRODUCTION ====
@@ -35,19 +36,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"testing"
 
-	"github.com/YakDriver/regexache"
-	"github.com/aws/aws-sdk-go-v2/aws"
+	// "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lakeformation"
-	"github.com/aws/aws-sdk-go-v2/service/lakeformation/types"
+	// "github.com/aws/aws-sdk-go-v2/service/lakeformation/types"
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-aws/internal/acctest"
 	"github.com/hashicorp/terraform-provider-aws/internal/conns"
 	"github.com/hashicorp/terraform-provider-aws/internal/create"
-	"github.com/hashicorp/terraform-provider-aws/internal/errs"
+	// "github.com/hashicorp/terraform-provider-aws/internal/errs"
 	"github.com/hashicorp/terraform-provider-aws/names"
 
 	// TIP: You will often need to import the package that this test file lives
@@ -83,6 +84,7 @@ import (
 // Cut and dry functions using well-used patterns, like typical flatteners and
 // expanders, don't need unit testing. However, if they are complex or
 // intricate, they should be unit tested.
+/*
 func TestLakeFormationOptInExampleUnitTest(t *testing.T) {
 	t.Parallel()
 
@@ -131,6 +133,7 @@ func TestLakeFormationOptInExampleUnitTest(t *testing.T) {
 		})
 	}
 }
+*/
 
 // TIP: ==== ACCEPTANCE TESTS ====
 // This is an example of a basic acceptance test. This should test as much of
@@ -147,14 +150,13 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 		t.Skip("skipping long-running test in short mode")
 	}
 
-	var lakeformationoptin lakeformation.DescribeLakeFormationOptInResponse
+	var lakeformationoptin lakeformation.ListLakeFormationOptInsOutput
 	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
 	resourceName := "aws_lakeformation_lake_formation_opt_in.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctest.PreCheck(ctx, t)
-			acctest.PreCheckPartitionHasService(t, names.LakeFormationEndpointID)
 			testAccPreCheck(ctx, t)
 		},
 		ErrorCheck:               acctest.ErrorCheck(t, names.LakeFormationServiceID),
@@ -162,27 +164,17 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckLakeFormationOptInDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccLakeFormationOptInConfig_basic(rName),
+				Config: testAccLakeFormationOptInConfig_basic(rName, "principal-foo"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckLakeFormationOptInExists(ctx, resourceName, &lakeformationoptin),
-					resource.TestCheckResourceAttr(resourceName, "auto_minor_version_upgrade", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "maintenance_window_start_time.0.day_of_week"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "user.*", map[string]string{
-						"console_access": "false",
-						"groups.#":       "0",
-						"username":       "Test",
-						"password":       "TestTest1234",
-					}),
-					// TIP: If the ARN can be partially or completely determined by the parameters passed, e.g. it contains the
-					// value of `rName`, either include the values in the regex or check for an exact match using `acctest.CheckResourceAttrRegionalARN`
-					acctest.MatchResourceAttrRegionalARN(ctx, resourceName, names.AttrARN, "lakeformation", regexache.MustCompile(`lakeformationoptin:.+$`)),
+					// resource.TestCheckResourceAttr(resourceName, lakeformationoptin.AttrDatabaseName, rName),
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"apply_immediately", "user"},
+				// TODO
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -194,14 +186,13 @@ func TestAccLakeFormationLakeFormationOptIn_disappears(t *testing.T) {
 		t.Skip("skipping long-running test in short mode")
 	}
 
-	var lakeformationoptin lakeformation.DescribeLakeFormationOptInResponse
+	var lakeformationoptin lakeformation.ListLakeFormationOptInsOutput
 	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
 	resourceName := "aws_lakeformation_lake_formation_opt_in.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctest.PreCheck(ctx, t)
-			acctest.PreCheckPartitionHasService(t, names.LakeFormationEndpointID)
 			testAccPreCheck(ctx, t)
 		},
 		ErrorCheck:               acctest.ErrorCheck(t, names.LakeFormationServiceID),
@@ -209,7 +200,7 @@ func TestAccLakeFormationLakeFormationOptIn_disappears(t *testing.T) {
 		CheckDestroy:             testAccCheckLakeFormationOptInDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccLakeFormationOptInConfig_basic(rName, testAccLakeFormationOptInVersionNewer),
+				Config: testAccLakeFormationOptInConfig_basic(rName, "principal-foo"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckLakeFormationOptInExists(ctx, resourceName, &lakeformationoptin),
 					// TIP: The Plugin-Framework disappears helper is similar to the Plugin-SDK version,
@@ -218,7 +209,7 @@ func TestAccLakeFormationLakeFormationOptIn_disappears(t *testing.T) {
 					// to exports_test.go:
 					//
 					//   var ResourceLakeFormationOptIn = newResourceLakeFormationOptIn
-					acctest.CheckFrameworkResourceDisappears(ctx, acctest.Provider, tflakeformation.ResourceLakeFormationOptIn, resourceName),
+					// TODO acctest.CheckFrameworkResourceDisappears(ctx, acctest.Provider, tflakeformation.ResourceLakeFormationOptIn, resourceName),
 				),
 				ExpectNonEmptyPlan: true,
 			},
@@ -235,16 +226,15 @@ func testAccCheckLakeFormationOptInDestroy(ctx context.Context) resource.TestChe
 				continue
 			}
 
-			
 			// TIP: ==== FINDERS ====
 			// The find function should be exported. Since it won't be used outside of the package, it can be exported
 			// in the `exports_test.go` file.
-			_, err := tflakeformation.FindLakeFormationOptInByID(ctx, conn, rs.Primary.ID)
+			_, err := tflakeformation.FindLakeFormationOptIn(ctx, conn, rs.Primary.ID)
 			if tfresource.NotFound(err) {
 				return nil
 			}
 			if err != nil {
-			        return create.Error(names.LakeFormation, create.ErrActionCheckingDestroyed, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, err)
+				return create.Error(names.LakeFormation, create.ErrActionCheckingDestroyed, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, err)
 			}
 
 			return create.Error(names.LakeFormation, create.ErrActionCheckingDestroyed, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, errors.New("not destroyed"))
@@ -254,7 +244,7 @@ func testAccCheckLakeFormationOptInDestroy(ctx context.Context) resource.TestChe
 	}
 }
 
-func testAccCheckLakeFormationOptInExists(ctx context.Context, name string, lakeformationoptin *lakeformation.DescribeLakeFormationOptInResponse) resource.TestCheckFunc {
+func testAccCheckLakeFormationOptInExists(ctx context.Context, name string, lakeformationoptin *lakeformation.ListLakeFormationOptInsOutput) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
@@ -267,7 +257,7 @@ func testAccCheckLakeFormationOptInExists(ctx context.Context, name string, lake
 
 		conn := acctest.Provider.Meta().(*conns.AWSClient).LakeFormationClient(ctx)
 
-		resp, err := tflakeformation.FindLakeFormationOptInByID(ctx, conn, rs.Primary.ID)
+		resp, err := tflakeformation.FindLakeFormationOptIn(ctx, conn, rs.Primary.ID)
 		if err != nil {
 			return create.Error(names.LakeFormation, create.ErrActionCheckingExistence, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, err)
 		}
@@ -293,7 +283,8 @@ func testAccPreCheck(ctx context.Context, t *testing.T) {
 	}
 }
 
-func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.DescribeLakeFormationOptInResponse) resource.TestCheckFunc {
+/*
+func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.ListLakeFormationOptInsOutput) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if before, after := aws.ToString(before.LakeFormationOptInId), aws.ToString(after.LakeFormationOptInId); before != after {
 			return create.Error(names.LakeFormation, create.ErrActionCheckingNotRecreated, tflakeformation.ResNameLakeFormationOptIn, aws.ToString(before.LakeFormationOptInId), errors.New("recreated"))
@@ -302,12 +293,13 @@ func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.Des
 		return nil
 	}
 }
+*/
 
-func testAccLakeFormationOptInConfig_basic(rName, version string) string {
+func testAccLakeFormationOptInConfig_basic(rName, principal string) string {
 	return fmt.Sprintf(`
 resource "aws_lakeformation_lake_formation_opt_in" "test" {
   principal     = "arn:aws:iam::123456789012:role/S3Access"
-  database_name = "foo"
+  database_name = %[1]s
 }
-`, rName, version)
+`, principal)
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 package lakeformation
+
 import (
 	// TIP: ==== IMPORTS ====
 	// This is a common set of imports but not customized to your code since
@@ -40,6 +41,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/names"
 )
+
 // TIP: ==== FILE STRUCTURE ====
 // All resources should follow this basic outline. Improve this resource's
 // maintainability by sticking to it.
@@ -62,8 +64,8 @@ func newResourceLakeFormationOptIn(_ context.Context) (resource.ResourceWithConf
 
 const (
 	ResNameLakeFormationOptIn = "Lake Formation Opt In"
-	resource_name = "plan.Name.String() - add name for this resource"
-	state_id = "state.ID.String() - add parameters to uniquely identify this resource"
+	resource_name             = "plan.Name.String() - add name for this resource"
+	state_id                  = "state.ID.String() - add parameters to uniquely identify this resource"
 )
 
 type resourceLakeFormationOptIn struct {
@@ -85,28 +87,31 @@ func (r *resourceLakeFormationOptIn) Metadata(_ context.Context, req resource.Me
 // * Do not add a blank line between attributes.
 //
 // Attribute basics:
-// * If a user can provide a value ("configure a value") for an
-//   attribute (e.g., instances = 5), we call the attribute an
-//   "argument."
-// * You change the way users interact with attributes using:
-//     - Required
-//     - Optional
-//     - Computed
-// * There are only four valid combinations:
+//   - If a user can provide a value ("configure a value") for an
+//     attribute (e.g., instances = 5), we call the attribute an
+//     "argument."
+//   - You change the way users interact with attributes using:
+//   - Required
+//   - Optional
+//   - Computed
+//   - There are only four valid combinations:
 //
 // 1. Required only - the user must provide a value
 // Required: true,
 //
-// 2. Optional only - the user can configure or omit a value; do not
-//    use Default or DefaultFunc
+//  2. Optional only - the user can configure or omit a value; do not
+//     use Default or DefaultFunc
+//
 // Optional: true,
 //
-// 3. Computed only - the provider can provide a value but the user
-//    cannot, i.e., read-only
+//  3. Computed only - the provider can provide a value but the user
+//     cannot, i.e., read-only
+//
 // Computed: true,
 //
-// 4. Optional AND Computed - the provider or user can provide a value;
-//    use this combination if you are using Default
+//  4. Optional AND Computed - the provider or user can provide a value;
+//     use this combination if you are using Default
+//
 // Optional: true,
 // Computed: true,
 //
@@ -134,43 +139,43 @@ func (r *resourceLakeFormationOptIn) Schema(ctx context.Context, req resource.Sc
 			},
 		},
 		/*
-		Blocks: map[string]schema.Block{
-			"complex_argument": schema.ListNestedBlock{
-				// TIP: ==== CUSTOM TYPES ====
-				// Use a custom type to identify the model type of the tested object
-				CustomType: fwtypes.NewListNestedObjectTypeOf[complexArgumentModel](ctx),
-				// TIP: ==== LIST VALIDATORS ====
-				// List and set validators take the place of MaxItems and MinItems in 
-				// Plugin-Framework based resources. Use listvalidator.SizeAtLeast(1) to
-				// make a nested object required. Similar to Plugin-SDK, complex objects 
-				// can be represented as lists or sets with listvalidator.SizeAtMost(1).
-				//
-				// For a complete mapping of Plugin-SDK to Plugin-Framework schema fields, 
-				// see:
-				// https://developer.hashicorp.com/terraform/plugin/framework/migrating/attributes-blocks/blocks
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"nested_required": schema.StringAttribute{
-							Required: true,
-						},
-						"nested_computed": schema.StringAttribute{
-							Computed: true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+			Blocks: map[string]schema.Block{
+				"complex_argument": schema.ListNestedBlock{
+					// TIP: ==== CUSTOM TYPES ====
+					// Use a custom type to identify the model type of the tested object
+					CustomType: fwtypes.NewListNestedObjectTypeOf[complexArgumentModel](ctx),
+					// TIP: ==== LIST VALIDATORS ====
+					// List and set validators take the place of MaxItems and MinItems in
+					// Plugin-Framework based resources. Use listvalidator.SizeAtLeast(1) to
+					// make a nested object required. Similar to Plugin-SDK, complex objects
+					// can be represented as lists or sets with listvalidator.SizeAtMost(1).
+					//
+					// For a complete mapping of Plugin-SDK to Plugin-Framework schema fields,
+					// see:
+					// https://developer.hashicorp.com/terraform/plugin/framework/migrating/attributes-blocks/blocks
+					Validators: []validator.List{
+						listvalidator.SizeAtMost(1),
+					},
+					NestedObject: schema.NestedBlockObject{
+						Attributes: map[string]schema.Attribute{
+							"nested_required": schema.StringAttribute{
+								Required: true,
+							},
+							"nested_computed": schema.StringAttribute{
+								Computed: true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 						},
 					},
 				},
+				"timeouts": timeouts.Block(ctx, timeouts.Opts{
+					Create: true,
+					Update: true,
+					Delete: true,
+				}),
 			},
-			"timeouts": timeouts.Block(ctx, timeouts.Opts{
-				Create: true,
-				Update: true,
-				Delete: true,
-			}),
-		},
 		*/
 	}
 }
@@ -186,13 +191,13 @@ func (r *resourceLakeFormationOptIn) Create(ctx context.Context, req resource.Cr
 	// 4. Call the AWS create/put function
 	// 5. Using the output from the create function, set the minimum arguments
 	//    and attributes for the Read function to work, as well as any computed
-	//    only attributes. 
+	//    only attributes.
 	// 6. Use a waiter to wait for create to complete
 	// 7. Save the request plan to response state
 
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().LakeFormationClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the plan
 	var plan resourceLakeFormationOptInModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -204,13 +209,12 @@ func (r *resourceLakeFormationOptIn) Create(ctx context.Context, req resource.Cr
 	var input lakeformation.CreateLakeFormationOptInInput
 
 	/*
-	// TIP: Using a field name prefix allows mapping fields such as `ID` to `LakeFormationOptInId`
-	resp.Diagnostics.Append(flex.Expand(ctx, plan, &input, flex.WithFieldNamePrefix("LakeFormationOptIn"))...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+		// TIP: Using a field name prefix allows mapping fields such as `ID` to `LakeFormationOptInId`
+		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input, flex.WithFieldNamePrefix("LakeFormationOptIn"))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	*/
-	
 
 	// TIP: -- 4. Call the AWS Create function
 	out, err := conn.CreateLakeFormationOptIn(ctx, &input)
@@ -238,18 +242,18 @@ func (r *resourceLakeFormationOptIn) Create(ctx context.Context, req resource.Cr
 	}
 
 	/*
-	// TIP: -- 6. Use a waiter to wait for create to complete
-	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
-	_, err = waitLakeFormationOptInCreated(ctx, conn, plan.ID.ValueString(), createTimeout)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForCreation, ResNameLakeFormationOptIn, plan.Name.String(), err),
-			err.Error(),
-		)
-		return
-	}
+		// TIP: -- 6. Use a waiter to wait for create to complete
+		createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
+		_, err = waitLakeFormationOptInCreated(ctx, conn, plan.ID.ValueString(), createTimeout)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForCreation, ResNameLakeFormationOptIn, plan.Name.String(), err),
+				err.Error(),
+			)
+			return
+		}
 	*/
-	
+
 	// TIP: -- 7. Save the request plan to response state
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
@@ -268,17 +272,17 @@ func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.Read
 
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().LakeFormationClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the state
 	var state resourceLakeFormationOptInModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 3. Get the resource from AWS using an API Get, List, or Describe-
 	// type function, or, better yet, using a finder.
-	out, err := findLakeFormationOptIn(ctx, conn, state.Principal.ValueString())
+	out, err := FindLakeFormationOptIn(ctx, conn, state.Principal.ValueString())
 	// TIP: -- 4. Remove resource from state if it is not found
 	if tfresource.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -291,13 +295,13 @@ func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.Read
 		)
 		return
 	}
-	
+
 	// TIP: -- 5. Set the arguments and attributes
 	resp.Diagnostics.Append(flex.Flatten(ctx, out, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 6. Set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -320,21 +324,21 @@ func (r *resourceLakeFormationOptIn) Delete(ctx context.Context, req resource.De
 	// 5. Use a waiter to wait for delete to complete
 	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().LakeFormationClient(ctx)
-	
+
 	// TIP: -- 2. Fetch the state
 	var state resourceLakeFormationOptInModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
 	// TIP: -- 3. Populate a delete input structure
 	input := lakeformation.DeleteLakeFormationOptInInput{
-		 Principal: &awstypes.DataLakePrincipal{
-        		DataLakePrincipalIdentifier: aws.String(state.Principal.ValueString()),
-    		},
+		Principal: &awstypes.DataLakePrincipal{
+			DataLakePrincipalIdentifier: aws.String(state.Principal.ValueString()),
+		},
 	}
-	
+
 	// TIP: -- 4. Call the AWS delete function
 	_, err := conn.DeleteLakeFormationOptIn(ctx, &input)
 	// TIP: On rare occassions, the API returns a not found error after deleting a
@@ -351,18 +355,18 @@ func (r *resourceLakeFormationOptIn) Delete(ctx context.Context, req resource.De
 		)
 		return
 	}
-	
+
 	/*
-	// TIP: -- 5. Use a waiter to wait for delete to complete
-	deleteTimeout := r.DeleteTimeout(ctx, state.Timeouts)
-	_, err = waitLakeFormationOptInDeleted(ctx, conn, state_id, deleteTimeout)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForDeletion, ResNameLakeFormationOptIn, state_id, err),
-			err.Error(),
-		)
-		return
-	}
+		// TIP: -- 5. Use a waiter to wait for delete to complete
+		deleteTimeout := r.DeleteTimeout(ctx, state.Timeouts)
+		_, err = waitLakeFormationOptInDeleted(ctx, conn, state_id, deleteTimeout)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForDeletion, ResNameLakeFormationOptIn, state_id, err),
+				err.Error(),
+			)
+			return
+		}
 	*/
 }
 
@@ -376,9 +380,6 @@ func (r *resourceLakeFormationOptIn) Delete(ctx context.Context, req resource.De
 func (r *resourceLakeFormationOptIn) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
-
-
-
 
 // TIP: ==== STATUS CONSTANTS ====
 // Create constants for states and statuses if the service does not
@@ -404,7 +405,6 @@ const (
 // exported (i.e., capitalized).
 //
 // You will need to adjust the parameters and names to fit the service.
-
 
 /*
 TODO: all waiters are commented out
@@ -496,16 +496,19 @@ func statusLakeFormationOptIn(ctx context.Context, conn *lakeformation.Client, i
 // comes in handy in other places besides the status function. As a result, it
 // is good practice to define it separately.
 
-/* TODO think about cases like:
+/*
+	TODO think about cases like:
+
 - there is opt-in for a database and this function executes for db and table
 - opposite of above
 - other combinations like opt-in for a role (is this allowed?)
+TODO - the below shouldn't be a public function. test.go notes to add to exports.go
 */
-func findLakeFormationOptIn(ctx context.Context, conn *lakeformation.Client, principal string) (*lakeformation.ListLakeFormationOptInsOutput, error) {
+func FindLakeFormationOptIn(ctx context.Context, conn *lakeformation.Client, principal string) (*lakeformation.ListLakeFormationOptInsOutput, error) {
 	in := &lakeformation.ListLakeFormationOptInsInput{
-		 Principal: &awstypes.DataLakePrincipal{
-        		DataLakePrincipalIdentifier: &principal,
-    		},
+		Principal: &awstypes.DataLakePrincipal{
+			DataLakePrincipalIdentifier: &principal,
+		},
 	}
 
 	out, err := conn.ListLakeFormationOptIns(ctx, in)
@@ -531,17 +534,17 @@ func findLakeFormationOptIn(ctx context.Context, conn *lakeformation.Client, pri
 // With Terraform Plugin-Framework configurations are deserialized into
 // Go types, providing type safety without the need for type assertions.
 // These structs should match the schema definition exactly, and the `tfsdk`
-// tag value should match the attribute name. 
+// tag value should match the attribute name.
 //
-// Nested objects are represented in their own data struct. These will 
+// Nested objects are represented in their own data struct. These will
 // also have a corresponding attribute type mapping for use inside flex
 // functions.
 //
 // See more:
 // https://developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values
 type resourceLakeFormationOptInModel struct {
-	Principal              types.String                                          `tfsdk:"principal"`
-	DatabaseName  types.String                                       `tfsdk:"database_name"`
+	Principal    types.String `tfsdk:"principal"`
+	DatabaseName types.String `tfsdk:"database_name"`
 }
 
 /*
