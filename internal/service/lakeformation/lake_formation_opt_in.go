@@ -17,7 +17,19 @@ import (
 	// need to import types and reference the nested types, e.g., as
 	// awstypes.<Type Name>.
 	"context"
-	"errors"
+	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	fwflex "github.com/hashicorp/terraform-provider-aws/internal/framework/flex"
+	fwtypes "github.com/hashicorp/terraform-provider-aws/internal/framework/types"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -36,8 +48,6 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/create"
 	"github.com/hashicorp/terraform-provider-aws/internal/errs"
 	"github.com/hashicorp/terraform-provider-aws/internal/framework"
-	"github.com/hashicorp/terraform-provider-aws/internal/framework/flex"
-	// fwtypes "github.com/hashicorp/terraform-provider-aws/internal/framework/types"
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/names"
 )
@@ -52,7 +62,6 @@ import (
 // 4. Create, read, update, delete methods (in that order)
 // 5. Other functions (flatteners, expanders, waiters, finders, etc.)
 
-// Function annotations are used for resource registration to the Provider. DO NOT EDIT.
 // @FrameworkResource("aws_lakeformation_lake_formation_opt_in", name="Lake Formation Opt In")
 func newResourceLakeFormationOptIn(_ context.Context) (resource.ResourceWithConfigure, error) {
 	r := &resourceLakeFormationOptIn{}
@@ -125,58 +134,89 @@ func (r *resourceLakeFormationOptIn) Metadata(_ context.Context, req resource.Me
 func (r *resourceLakeFormationOptIn) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"principal": schema.StringAttribute{
-				Required: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"database_name": schema.StringAttribute{
-				Required: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			names.AttrPrincipal: schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+			names.AttrID:        framework.IDAttribute(),
 		},
-		/*
-			Blocks: map[string]schema.Block{
-				"complex_argument": schema.ListNestedBlock{
-					// TIP: ==== CUSTOM TYPES ====
-					// Use a custom type to identify the model type of the tested object
-					CustomType: fwtypes.NewListNestedObjectTypeOf[complexArgumentModel](ctx),
-					// TIP: ==== LIST VALIDATORS ====
-					// List and set validators take the place of MaxItems and MinItems in
-					// Plugin-Framework based resources. Use listvalidator.SizeAtLeast(1) to
-					// make a nested object required. Similar to Plugin-SDK, complex objects
-					// can be represented as lists or sets with listvalidator.SizeAtMost(1).
-					//
-					// For a complete mapping of Plugin-SDK to Plugin-Framework schema fields,
-					// see:
-					// https://developer.hashicorp.com/terraform/plugin/framework/migrating/attributes-blocks/blocks
-					Validators: []validator.List{
-						listvalidator.SizeAtMost(1),
-					},
-					NestedObject: schema.NestedBlockObject{
-						Attributes: map[string]schema.Attribute{
-							"nested_required": schema.StringAttribute{
-								Required: true,
-							},
-							"nested_computed": schema.StringAttribute{
-								Computed: true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
+		Blocks: map[string]schema.Block{
+			names.AttrDatabase: schema.ListNestedBlock{
+				CustomType: fwtypes.NewListNestedObjectTypeOf[LFOptInDatabase](ctx),
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						names.AttrCatalogID: catalogIDSchemaOptional_duplicate(),
+						names.AttrName: schema.StringAttribute{
+							Required: true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
 							},
 						},
 					},
 				},
-				"timeouts": timeouts.Block(ctx, timeouts.Opts{
-					Create: true,
-					Update: true,
-					Delete: true,
-				}),
 			},
-		*/
+			"table": schema.ListNestedBlock{
+				CustomType: fwtypes.NewListNestedObjectTypeOf[LFOptInTable](ctx),
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						names.AttrCatalogID: catalogIDSchemaOptional_duplicate(),
+						names.AttrDatabaseName: schema.StringAttribute{
+							Required: true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+						},
+						names.AttrName: schema.StringAttribute{
+							Optional: true,
+							Validators: []validator.String{
+								stringvalidator.AtLeastOneOf(
+									path.MatchRelative().AtParent().AtName(names.AttrName),
+									path.MatchRelative().AtParent().AtName("wildcard"),
+								),
+							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+						},
+						"wildcard": schema.BoolAttribute{
+							Optional: true,
+							Validators: []validator.Bool{
+								boolvalidator.AtLeastOneOf(
+									path.MatchRelative().AtParent().AtName(names.AttrName),
+									path.MatchRelative().AtParent().AtName("wildcard"),
+								),
+							},
+							PlanModifiers: []planmodifier.Bool{
+								boolplanmodifier.RequiresReplace(),
+							},
+						},
+					},
+				},
+			},
+			names.AttrTimeouts: timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
+		},
+	}
+}
+
+// TODO:  share function in resource_lf_tag.go? what is the etiquette?
+func catalogIDSchemaOptional_duplicate() schema.StringAttribute {
+	return schema.StringAttribute{
+		Optional: true,
+		PlanModifiers: []planmodifier.String{
+			stringplanmodifier.RequiresReplace(),
+		},
 	}
 }
 
@@ -199,63 +239,81 @@ func (r *resourceLakeFormationOptIn) Create(ctx context.Context, req resource.Cr
 	conn := r.Meta().LakeFormationClient(ctx)
 
 	// TIP: -- 2. Fetch the plan
-	var plan resourceLakeFormationOptInModel
+	var plan ResourceLakeFormationOptInData
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TIP: -- 3. Populate a Create input structure
 	var input lakeformation.CreateLakeFormationOptInInput
-
-	/*
-		// TIP: Using a field name prefix allows mapping fields such as `ID` to `LakeFormationOptInId`
-		resp.Diagnostics.Append(flex.Expand(ctx, plan, &input, flex.WithFieldNamePrefix("LakeFormationOptIn"))...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	*/
-
-	// TIP: -- 4. Call the AWS Create function
-	out, err := conn.CreateLakeFormationOptIn(ctx, &input)
-	if err != nil {
-		// TIP: Since ID has not been set yet, you cannot use plan.ID.String()
-		// in error messages at this point.
-		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionCreating, ResNameLakeFormationOptIn, resource_name, err),
-			err.Error(),
-		)
-		return
-	}
-	if out == nil {
-		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionCreating, ResNameLakeFormationOptIn, resource_name, nil),
-			errors.New("empty output").Error(),
-		)
-		return
+	input.Principal = &awstypes.DataLakePrincipal{
+		DataLakePrincipalIdentifier: fwflex.StringFromFramework(ctx, plan.Principal),
 	}
 
-	// TIP: -- 5. Using the output from the create function, set attributes
-	resp.Diagnostics.Append(flex.Flatten(ctx, out, &plan)...)
+	lfoptin := newLFOptIn(&plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	/*
-		// TIP: -- 6. Use a waiter to wait for create to complete
-		createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
-		_, err = waitLakeFormationOptInCreated(ctx, conn, plan.ID.ValueString(), createTimeout)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForCreation, ResNameLakeFormationOptIn, plan.Name.String(), err),
-				err.Error(),
-			)
-			return
-		}
-	*/
+	res := lfoptin.expandResource(ctx, &resp.Diagnostics)
+	input.Resource = res
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	// TIP: -- 7. Save the request plan to response state
+	var output *lakeformation.CreateLakeFormationOptInOutput
+	err := retry.RetryContext(ctx, IAMPropagationTimeout, func() *retry.RetryError {
+		var err error
+		output, err = conn.CreateLakeFormationOptIn(ctx, &input)
+		if err != nil {
+			if errs.IsA[*awstypes.ConcurrentModificationException](err) || errs.IsA[*awstypes.AccessDeniedException](err) {
+				return retry.RetryableError(err)
+			}
+
+			return retry.NonRetryableError(err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionCreating, ResNameLakeFormationOptIn, prettify(input), err),
+			err.Error(),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(fwflex.Flatten(ctx, output, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	id := strconv.Itoa(create.StringHashcode(prettify(input)))
+	plan.ID = fwflex.StringValueToFramework(ctx, id)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
+}
+
+func findLFOptInByID(ctx context.Context, conn *lakeformation.Client, principal *awstypes.DataLakePrincipal, resource *awstypes.Resource) (*lakeformation.ListLakeFormationOptInsOutput, error) {
+	in := &lakeformation.ListLakeFormationOptInsInput{
+		Principal: principal,
+		Resource:  resource,
+	}
+
+	out, err := conn.ListLakeFormationOptIns(ctx, in)
+
+	if len(out.LakeFormationOptInsInfoList) == 0 {
+		return nil, &retry.NotFoundError{
+			LastError:   err,
+			LastRequest: in,
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -274,15 +332,23 @@ func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.Read
 	conn := r.Meta().LakeFormationClient(ctx)
 
 	// TIP: -- 2. Fetch the state
-	var state resourceLakeFormationOptInModel
+	var state ResourceLakeFormationOptInData
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TIP: -- 3. Get the resource from AWS using an API Get, List, or Describe-
-	// type function, or, better yet, using a finder.
-	out, err := FindLakeFormationOptIn(ctx, conn, state.Principal.ValueString())
+	lfoptin := newLFOptIn(&state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	res := lfoptin.expandResource(ctx, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	principal := &awstypes.DataLakePrincipal{DataLakePrincipalIdentifier: fwflex.StringFromFramework(ctx, state.Principal)}
+	out, err := findLFOptInByID(ctx, conn, principal, res)
 	// TIP: -- 4. Remove resource from state if it is not found
 	if tfresource.NotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -290,84 +356,89 @@ func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.Read
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionSetting, ResNameLakeFormationOptIn, state_id, err),
+			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionSetting, ResNameLakeFormationOptIn, state.ID.String(), err),
 			err.Error(),
 		)
 		return
 	}
 
-	// TIP: -- 5. Set the arguments and attributes
-	resp.Diagnostics.Append(flex.Flatten(ctx, out, &state)...)
+	resp.Diagnostics.Append(fwflex.Flatten(ctx, out, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TIP: -- 6. Set the state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *resourceLakeFormationOptIn) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// TIP: ==== RESOURCE DELETE ====
-	// Most resources have Delete functions. There are rare situations
-	// where you might not need a delete:
-	// a. The AWS API does not provide a way to delete the resource
-	// b. The point of your resource is to perform an action (e.g., reboot a
-	//    server) and deleting serves no purpose.
-	//
-	// The Delete function should do the following things. Make sure there
-	// is a good reason if you don't do one of these.
-	//
-	// 1. Get a client connection to the relevant service
-	// 2. Fetch the state
-	// 3. Populate a delete input structure
-	// 4. Call the AWS delete function
-	// 5. Use a waiter to wait for delete to complete
-	// TIP: -- 1. Get a client connection to the relevant service
 	conn := r.Meta().LakeFormationClient(ctx)
 
 	// TIP: -- 2. Fetch the state
-	var state resourceLakeFormationOptInModel
+	var state ResourceLakeFormationOptInData
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// TIP: -- 3. Populate a delete input structure
-	input := lakeformation.DeleteLakeFormationOptInInput{
+	input := &lakeformation.DeleteLakeFormationOptInInput{
 		Principal: &awstypes.DataLakePrincipal{
 			DataLakePrincipalIdentifier: aws.String(state.Principal.ValueString()),
 		},
 	}
 
-	// TIP: -- 4. Call the AWS delete function
-	_, err := conn.DeleteLakeFormationOptIn(ctx, &input)
-	// TIP: On rare occassions, the API returns a not found error after deleting a
-	// resource. If that happens, we don't want it to show up as an error.
+	lfoptin := newLFOptIn(&state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	res := lfoptin.expandResource(ctx, &resp.Diagnostics)
+	input.Resource = res
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteTimeout := r.DeleteTimeout(ctx, state.Timeouts)
+	err := retry.RetryContext(ctx, deleteTimeout, func() *retry.RetryError {
+		var err error
+		_, err = conn.DeleteLakeFormationOptIn(ctx, input)
+		if err != nil {
+			if errs.IsA[*awstypes.ConcurrentModificationException](err) {
+				return retry.RetryableError(err)
+			}
+
+			if errs.IsAErrorMessageContains[*awstypes.AccessDeniedException](err, "is not authorized") {
+				return retry.RetryableError(err)
+			}
+
+			return retry.NonRetryableError(fmt.Errorf("removing Lake Formation Opt In: %w", err))
+		}
+		return nil
+	})
+
+	if tfresource.TimedOut(err) {
+		_, err = conn.DeleteLakeFormationOptIn(ctx, input)
+	}
+
 	if err != nil {
-		// changed from ResourceNotFoundException as it wouldn't compile
 		if errs.IsA[*awstypes.EntityNotFoundException](err) {
 			return
 		}
 
 		resp.Diagnostics.AddError(
-			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionDeleting, ResNameLakeFormationOptIn, state_id, err),
+			create.ProblemStandardMessage(names.LakeFormation, create.ErrActionDeleting, ResNameLakeFormationOptIn, state.ID.String(), err),
 			err.Error(),
 		)
 		return
 	}
+}
 
-	/*
-		// TIP: -- 5. Use a waiter to wait for delete to complete
-		deleteTimeout := r.DeleteTimeout(ctx, state.Timeouts)
-		_, err = waitLakeFormationOptInDeleted(ctx, conn, state_id, deleteTimeout)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				create.ProblemStandardMessage(names.LakeFormation, create.ErrActionWaitingForDeletion, ResNameLakeFormationOptIn, state_id, err),
-				err.Error(),
-			)
-			return
-		}
-	*/
+func (r *resourceLakeFormationOptIn) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.ExactlyOneOf(
+			path.MatchRoot(names.AttrDatabase),
+			path.MatchRoot("table"),
+		),
+	}
 }
 
 // TIP: ==== TERRAFORM IMPORTING ====
@@ -530,6 +601,71 @@ func FindLakeFormationOptIn(ctx context.Context, conn *lakeformation.Client, pri
 	return out, nil
 }
 
+func (d *dbOptIn) expandResource(ctx context.Context, diags *diag.Diagnostics) *awstypes.Resource {
+	var r awstypes.Resource
+	dbptr, err := d.data.Database.ToPtr(ctx)
+	diags.Append(err...)
+	if diags.HasError() {
+		return nil
+	}
+
+	var db awstypes.DatabaseResource
+	diags.Append(fwflex.Expand(ctx, dbptr, &db)...)
+	if diags.HasError() {
+		return nil
+	}
+
+	r.Database = &db
+
+	return &r
+}
+
+func (d *tbOptIn) expandResource(ctx context.Context, diags *diag.Diagnostics) *awstypes.Resource {
+	var r awstypes.Resource
+
+	tbptr, err := d.data.Table.ToPtr(ctx)
+	diags.Append(err...)
+	if diags.HasError() {
+		return nil
+	}
+
+	var tb awstypes.TableResource
+	diags.Append(fwflex.Expand(ctx, tbptr, &tb)...)
+	if diags.HasError() {
+		return nil
+	}
+
+	r.Table = &tb
+
+	return &r
+}
+
+type lfOptIn interface {
+	expandResource(context.Context, *diag.Diagnostics) *awstypes.Resource
+	// findTag(context.Context, *lakeformation.GetResourceLFTagsOutput, *diag.Diagnostics) fwtypes.ListNestedObjectValueOf[LFTag]
+}
+
+type dbOptIn struct {
+	data *ResourceLakeFormationOptInData
+}
+
+type tbOptIn struct {
+	data *ResourceLakeFormationOptInData
+}
+
+func newLFOptIn(r *ResourceLakeFormationOptInData, diags *diag.Diagnostics) lfOptIn {
+	switch {
+	case !r.Database.IsNull():
+		return &dbOptIn{data: r}
+	case !r.Table.IsNull():
+		return &tbOptIn{data: r}
+	default:
+		diags.AddError("unexpected resource type",
+			"unexpected resource type")
+		return nil
+	}
+}
+
 // TIP: ==== DATA STRUCTURES ====
 // With Terraform Plugin-Framework configurations are deserialized into
 // Go types, providing type safety without the need for type assertions.
@@ -542,25 +678,24 @@ func FindLakeFormationOptIn(ctx context.Context, conn *lakeformation.Client, pri
 //
 // See more:
 // https://developer.hashicorp.com/terraform/plugin/framework/handling-data/accessing-values
-type resourceLakeFormationOptInModel struct {
-	Principal    types.String `tfsdk:"principal"`
-	DatabaseName types.String `tfsdk:"database_name"`
+
+// TODO: reuse ones in resource_lf_tag.go?
+type ResourceLakeFormationOptInData struct {
+	Database  fwtypes.ListNestedObjectValueOf[LFOptInDatabase] `tfsdk:"database"`
+	ID        types.String                                     `tfsdk:"id"`
+	Principal types.String                                     `tfsdk:"principal"`
+	Table     fwtypes.ListNestedObjectValueOf[LFOptInTable]    `tfsdk:"table"`
+	Timeouts  timeouts.Value                                   `tfsdk:"timeouts"`
 }
 
-/*
-type Database struct {
+type LFOptInDatabase struct {
 	CatalogID types.String `tfsdk:"catalog_id"`
 	Name      types.String `tfsdk:"name"`
 }
 
-type table struct {
+type LFOptInTable struct {
 	CatalogID    types.String `tfsdk:"catalog_id"`
 	DatabaseName types.String `tfsdk:"database_name"`
 	Name         types.String `tfsdk:"name"`
 	Wildcard     types.Bool   `tfsdk:"wildcard"`
 }
-
-type table principal {
-	DataLakePrincipalIdentifier types.String `tfsdk:"name"`
-}
-*/

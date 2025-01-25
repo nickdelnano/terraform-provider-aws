@@ -3,32 +3,8 @@
 
 package lakeformation_test
 
-// **PLEASE DELETE THIS AND ALL TIP COMMENTS BEFORE SUBMITTING A PR FOR REVIEW!**
-//
-// TIP: ==== INTRODUCTION ====
-// Thank you for trying the skaff tool!
-//
-// You have opted to include these helpful comments. They all include "TIP:"
-// to help you find and remove them when you're done with them.
-//
-// While some aspects of this file are customized to your input, the
-// scaffold tool does *not* look at the AWS API and ensure it has correct
-// function, structure, and variable names. It makes guesses based on
-// commonalities. You will need to make significant adjustments.
-//
-// In other words, as generated, this is a rough outline of the work you will
-// need to do. If something doesn't make sense for your situation, get rid of
-// it.
-
 import (
-	// TIP: ==== IMPORTS ====
-	// This is a common set of imports but not customized to your code since
-	// your code hasn't been written yet. Make sure you, your IDE, or
-	// goimports -w <file> fixes these imports.
-	//
-	// The provider linter wants your imports to be in two groups: first,
-	// standard library (i.e., "fmt" or "strings"), second, everything else.
-	//
+
 	// Also, AWS Go SDK v2 may handle nested structures differently than v1,
 	// using the services/lakeformation/types package. If so, you'll
 	// need to import types and reference the nested types, e.g., as
@@ -164,7 +140,7 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckLakeFormationOptInDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccLakeFormationOptInConfig_basic(rName, "principal-foo"),
+				Config: testAccLakeFormationOptInConfig_basic(rName, "ndelnano_lake_formation_enabled"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckLakeFormationOptInExists(ctx, resourceName, &lakeformationoptin),
 					// resource.TestCheckResourceAttr(resourceName, lakeformationoptin.AttrDatabaseName, rName),
@@ -298,8 +274,10 @@ func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.Lis
 func testAccLakeFormationOptInConfig_basic(rName, principal string) string {
 	return fmt.Sprintf(`
 resource "aws_lakeformation_lake_formation_opt_in" "test" {
-  principal     = "arn:aws:iam::123456789012:role/S3Access"
-  database_name = %[1]s
+  principal     = "arn:aws:iam::127534248928:role/drea-s3-access"
+ 	database {
+      name = "%[1]s"
+  }
 }
 `, principal)
 }

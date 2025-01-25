@@ -352,6 +352,8 @@ func (r *resourceResourceLFTag) Create(ctx context.Context, req resource.CreateR
 	id := strconv.Itoa(create.StringHashcode(prettify(in)))
 	state.ID = fwflex.StringValueToFramework(ctx, id)
 
+	// ----------------------------------------------------------------------------------------------------
+
 	createTimeout := r.CreateTimeout(ctx, plan.Timeouts)
 	outputRaw, err := tfresource.RetryWhenNotFound(ctx, createTimeout, func() (any, error) {
 		return findResourceLFTagByID(ctx, conn, state.CatalogID.ValueString(), res)
