@@ -31,7 +31,7 @@ func (p *servicePackage) FrameworkResources(ctx context.Context) []*types.Servic
 			Name:     "Resource LF Tag",
 		},
 		{
-			Factory:  new_ResourceLakeFormationOptIn,
+			Factory:  newResourceLakeFormationOptIn,
 			TypeName: "aws_lakeformation_lake_formation_opt_in",
 			Name:     "Lake Formation Opt In",
 		},
