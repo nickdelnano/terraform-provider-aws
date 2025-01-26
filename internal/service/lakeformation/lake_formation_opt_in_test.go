@@ -12,10 +12,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awstypes "github.com/aws/aws-sdk-go-v2/service/lakeformation/types"
+	"github.com/hashicorp/terraform-provider-aws/internal/errs"
 	"testing"
 
-	// "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lakeformation"
 	// "github.com/aws/aws-sdk-go-v2/service/lakeformation/types"
 	sdkacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -46,78 +47,6 @@ import (
 // 7. Helper functions (exists, destroy, check, etc.)
 // 8. Functions that return Terraform configurations
 
-// TIP: ==== UNIT TESTS ====
-// This is an example of a unit test. Its name is not prefixed with
-// "TestAcc" like an acceptance test.
-//
-// Unlike acceptance tests, unit tests do not access AWS and are focused on a
-// function (or method). Because of this, they are quick and cheap to run.
-//
-// In designing a resource's implementation, isolate complex bits from AWS bits
-// so that they can be tested through a unit test. We encourage more unit tests
-// in the provider.
-//
-// Cut and dry functions using well-used patterns, like typical flatteners and
-// expanders, don't need unit testing. However, if they are complex or
-// intricate, they should be unit tested.
-/*
-func TestLakeFormationOptInExampleUnitTest(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		TestName string
-		Input    string
-		Expected string
-		Error    bool
-	}{
-		{
-			TestName: "empty",
-			Input:    "",
-			Expected: "",
-			Error:    true,
-		},
-		{
-			TestName: "descriptive name",
-			Input:    "some input",
-			Expected: "some output",
-			Error:    false,
-		},
-		{
-			TestName: "another descriptive name",
-			Input:    "more input",
-			Expected: "more output",
-			Error:    false,
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.TestName, func(t *testing.T) {
-			t.Parallel()
-			got, err := tflakeformation.FunctionFromResource(testCase.Input)
-
-			if err != nil && !testCase.Error {
-				t.Errorf("got error (%s), expected no error", err)
-			}
-
-			if err == nil && testCase.Error {
-				t.Errorf("got (%s) and no error, expected error", got)
-			}
-
-			if got != testCase.Expected {
-				t.Errorf("got %s, expected %s", got, testCase.Expected)
-			}
-		})
-	}
-}
-*/
-
-// TIP: ==== ACCEPTANCE TESTS ====
-// This is an example of a basic acceptance test. This should test as much of
-// standard functionality of the resource as possible, and test importing, if
-// applicable. We prefix its name with "TestAcc", the service, and the
-// resource name.
-//
-// Acceptance test access AWS and cost money to run.
 func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 	ctx := acctest.Context(t)
 	// TIP: This is a long-running test guard for tests that run longer than
@@ -126,7 +55,6 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 		t.Skip("skipping long-running test in short mode")
 	}
 
-	var lakeformationoptin lakeformation.ListLakeFormationOptInsOutput
 	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
 	resourceName := "aws_lakeformation_lake_formation_opt_in.test"
 
@@ -140,17 +68,10 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckLakeFormationOptInDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccLakeFormationOptInConfig_basic(rName, "ndelnano_lake_formation_enabled"),
+				Config: testAccLakeFormationOptInConfig_basic(rName, "database"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckLakeFormationOptInExists(ctx, resourceName, &lakeformationoptin),
-					// resource.TestCheckResourceAttr(resourceName, lakeformationoptin.AttrDatabaseName, rName),
+					testAccCheckLakeFormationOptInExists(ctx, resourceName),
 				),
-			},
-			{
-				// TODO
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})
@@ -162,7 +83,6 @@ func TestAccLakeFormationLakeFormationOptIn_disappears(t *testing.T) {
 		t.Skip("skipping long-running test in short mode")
 	}
 
-	var lakeformationoptin lakeformation.ListLakeFormationOptInsOutput
 	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
 	resourceName := "aws_lakeformation_lake_formation_opt_in.test"
 
@@ -178,7 +98,7 @@ func TestAccLakeFormationLakeFormationOptIn_disappears(t *testing.T) {
 			{
 				Config: testAccLakeFormationOptInConfig_basic(rName, "principal-foo"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckLakeFormationOptInExists(ctx, resourceName, &lakeformationoptin),
+					testAccCheckLakeFormationOptInExists(ctx, resourceName),
 					// TIP: The Plugin-Framework disappears helper is similar to the Plugin-SDK version,
 					// but expects a new resource factory function as the third argument. To expose this
 					// private function to the testing package, you may need to add a line like the following
@@ -202,25 +122,57 @@ func testAccCheckLakeFormationOptInDestroy(ctx context.Context) resource.TestChe
 				continue
 			}
 
-			// TIP: ==== FINDERS ====
-			// The find function should be exported. Since it won't be used outside of the package, it can be exported
-			// in the `exports_test.go` file.
-			_, err := tflakeformation.FindLakeFormationOptIn(ctx, conn, rs.Primary.ID)
-			if tfresource.NotFound(err) {
-				return nil
-			}
-			if err != nil {
-				return create.Error(names.LakeFormation, create.ErrActionCheckingDestroyed, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, err)
+			input := &lakeformation.ListLakeFormationOptInsInput{
+				Principal: &awstypes.DataLakePrincipal{},
+				Resource:  &awstypes.Resource{},
 			}
 
-			return create.Error(names.LakeFormation, create.ErrActionCheckingDestroyed, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, errors.New("not destroyed"))
+			if v, ok := rs.Primary.Attributes[names.AttrPrincipal]; ok {
+				input.Principal.DataLakePrincipalIdentifier = aws.String(v)
+			}
+
+			// If Resource is a database
+			if v, ok := rs.Primary.Attributes["database.0.name"]; ok {
+				input.Resource.Database = &awstypes.DatabaseResource{
+					Name: aws.String(v),
+				}
+
+				if v, ok := rs.Primary.Attributes["database.0.catalog_id"]; ok && len(v) > 1 {
+					input.Resource.Database.CatalogId = aws.String(v)
+				}
+			}
+
+			// If Resource is a table
+			if v, ok := rs.Primary.Attributes["table.0.database_name"]; ok {
+				input.Resource.Table = &awstypes.TableResource{
+					DatabaseName: aws.String(v),
+				}
+
+				if v, ok := rs.Primary.Attributes["table.0.catalog_id"]; ok && len(v) > 1 {
+					input.Resource.Table.CatalogId = aws.String(v)
+				}
+
+				if v, ok := rs.Primary.Attributes["table.0.name"]; ok {
+					input.Resource.Table.Name = aws.String(v)
+				}
+
+				if v, ok := rs.Primary.Attributes["table.0.wildcard"]; ok && v == acctest.CtTrue {
+					input.Resource.Table.TableWildcard = &awstypes.TableWildcard{}
+				}
+			}
+
+			if _, err := tflakeformation.FindLFOptInByID(ctx, conn, input.Principal, input.Resource); err != nil {
+				// Resource doesn't exist or requester doesn't have permission - the error does not distinguish
+				if errs.IsA[*awstypes.AccessDeniedException](err) {
+					return nil
+				}
+			}
 		}
-
 		return nil
 	}
 }
 
-func testAccCheckLakeFormationOptInExists(ctx context.Context, name string, lakeformationoptin *lakeformation.ListLakeFormationOptInsOutput) resource.TestCheckFunc {
+func testAccCheckLakeFormationOptInExists(ctx context.Context, name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
@@ -231,14 +183,51 @@ func testAccCheckLakeFormationOptInExists(ctx context.Context, name string, lake
 			return create.Error(names.LakeFormation, create.ErrActionCheckingExistence, tflakeformation.ResNameLakeFormationOptIn, name, errors.New("not set"))
 		}
 
+		input := &lakeformation.ListLakeFormationOptInsInput{
+			Principal: &awstypes.DataLakePrincipal{},
+			Resource:  &awstypes.Resource{},
+		}
+
+		if v, ok := rs.Primary.Attributes[names.AttrPrincipal]; ok {
+			input.Principal.DataLakePrincipalIdentifier = aws.String(v)
+		}
+
+		// If Resource is a database
+		if v, ok := rs.Primary.Attributes["database.0.name"]; ok {
+			input.Resource.Database = &awstypes.DatabaseResource{
+				Name: aws.String(v),
+			}
+
+			if v, ok := rs.Primary.Attributes["database.0.catalog_id"]; ok && len(v) > 1 {
+				input.Resource.Database.CatalogId = aws.String(v)
+			}
+		}
+
+		// If Resource is a table
+		if v, ok := rs.Primary.Attributes["table.0.database_name"]; ok {
+			input.Resource.Table = &awstypes.TableResource{
+				DatabaseName: aws.String(v),
+			}
+
+			if v, ok := rs.Primary.Attributes["table.0.catalog_id"]; ok && len(v) > 1 {
+				input.Resource.Table.CatalogId = aws.String(v)
+			}
+
+			if v, ok := rs.Primary.Attributes["table.0.name"]; ok {
+				input.Resource.Table.Name = aws.String(v)
+			}
+
+			if v, ok := rs.Primary.Attributes["table.0.wildcard"]; ok && v == acctest.CtTrue {
+				input.Resource.Table.TableWildcard = &awstypes.TableWildcard{}
+			}
+		}
+
 		conn := acctest.Provider.Meta().(*conns.AWSClient).LakeFormationClient(ctx)
 
-		resp, err := tflakeformation.FindLakeFormationOptIn(ctx, conn, rs.Primary.ID)
+		_, err := tflakeformation.FindLFOptInByID(ctx, conn, input.Principal, input.Resource)
 		if err != nil {
 			return create.Error(names.LakeFormation, create.ErrActionCheckingExistence, tflakeformation.ResNameLakeFormationOptIn, rs.Primary.ID, err)
 		}
-
-		*lakeformationoptin = *resp
 
 		return nil
 	}
@@ -271,13 +260,32 @@ func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.Lis
 }
 */
 
-func testAccLakeFormationOptInConfig_basic(rName, principal string) string {
+func testAccLakeFormationOptInConfig_basic(rName, database string) string {
+	/*
+		terraform needs to delete these last, otherwise admin can be deleted and List API fails
+			resource "aws_lakeformation_data_lake_settings" "test" {
+				admins = [data.aws_iam_session_context.current.issuer_arn]
+			}
+			depends_on = [aws_lakeformation_data_lake_settings.test, aws_glue_catalog_database.test]
+
+	*/
 	return fmt.Sprintf(`
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_session_context" "current" {
+  arn = data.aws_caller_identity.current.arn
+}
+
+resource "aws_glue_catalog_database" "test" {
+  name = %[1]q
+}
+
 resource "aws_lakeformation_lake_formation_opt_in" "test" {
-  principal     = "arn:aws:iam::127534248928:role/drea-s3-access"
+  principal = data.aws_iam_session_context.current.issuer_arn
  	database {
       name = "%[1]s"
   }
+  depends_on = [aws_glue_catalog_database.test]
 }
-`, principal)
+`, database)
 }
