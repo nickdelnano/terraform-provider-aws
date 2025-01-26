@@ -49,8 +49,6 @@ import (
 
 func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 	ctx := acctest.Context(t)
-	// TIP: This is a long-running test guard for tests that run longer than
-	// 300s (5 min) generally.
 	if testing.Short() {
 		t.Skip("skipping long-running test in short mode")
 	}
@@ -71,6 +69,8 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 				Config: testAccLakeFormationOptInConfig_basic(rName, "database"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckLakeFormationOptInExists(ctx, resourceName),
+					resource.TestCheckResourceAttr(resourceName, "database.0.name", "database"),
+					resource.TestCheckResourceAttrPair(resourceName, "principal", "data.aws_iam_session_context.current", "issuer_arn"),
 				),
 			},
 		},
@@ -261,12 +261,11 @@ func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.Lis
 */
 
 func testAccLakeFormationOptInConfig_basic(rName, database string) string {
-	/*
-		terraform needs to delete these last, otherwise admin can be deleted and List API fails
-			resource "aws_lakeformation_data_lake_settings" "test" {
-				admins = [data.aws_iam_session_context.current.issuer_arn]
-			}
-			depends_on = [aws_lakeformation_data_lake_settings.test, aws_glue_catalog_database.test]
+	/* TODO
+	resource "aws_lakeformation_data_lake_settings" "test" {
+		admins = [data.aws_iam_session_context.current.issuer_arn]
+	}
+	depends_on = [aws_lakeformation_data_lake_settings.test, aws_glue_catalog_database.test]
 
 	*/
 	return fmt.Sprintf(`
