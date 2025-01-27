@@ -73,6 +73,15 @@ func TestAccLakeFormationLakeFormationOptIn_basic(t *testing.T) {
 					resource.TestCheckResourceAttrPair(resourceName, "principal", "data.aws_iam_session_context.current", "issuer_arn"),
 				),
 			},
+			/* TODO
+			{
+				ResourceName:                         resourceName,
+				ImportStateIdFunc:                    testAccCatalogTableOptimizerStateIDFunc(resourceName),
+				ImportStateVerifyIdentifierAttribute: names.AttrTableName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+			},
+			*/
 		},
 	})
 }
@@ -96,19 +105,53 @@ func TestAccLakeFormationLakeFormationOptIn_disappears(t *testing.T) {
 		CheckDestroy:             testAccCheckLakeFormationOptInDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccLakeFormationOptInConfig_basic(rName, "principal-foo"),
+				Config: testAccLakeFormationOptInConfig_basic(rName, "database"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckLakeFormationOptInExists(ctx, resourceName),
-					// TIP: The Plugin-Framework disappears helper is similar to the Plugin-SDK version,
-					// but expects a new resource factory function as the third argument. To expose this
-					// private function to the testing package, you may need to add a line like the following
-					// to exports_test.go:
-					//
-					//   var ResourceLakeFormationOptIn = newResourceLakeFormationOptIn
-					// TODO acctest.CheckFrameworkResourceDisappears(ctx, acctest.Provider, tflakeformation.ResourceLakeFormationOptIn, resourceName),
+					acctest.CheckFrameworkResourceDisappears(ctx, acctest.Provider, tflakeformation.ResourceLakeFormationOptIn, resourceName),
 				),
 				ExpectNonEmptyPlan: true,
 			},
+		},
+	})
+}
+
+func TestAccLakeFormationLakeFormationOptIn_table(t *testing.T) {
+	ctx := acctest.Context(t)
+	if testing.Short() {
+		t.Skip("skipping long-running test in short mode")
+	}
+
+	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
+	resourceName := "aws_lakeformation_lake_formation_opt_in.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctest.PreCheck(ctx, t)
+			testAccPreCheck(ctx, t)
+		},
+		ErrorCheck:               acctest.ErrorCheck(t, names.LakeFormationServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckLakeFormationOptInDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccLakeFormationOptInConfig_table(rName, "database", "table"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckLakeFormationOptInExists(ctx, resourceName),
+					resource.TestCheckResourceAttr(resourceName, "table.0.database_name", "database"),
+					resource.TestCheckResourceAttr(resourceName, "table.0.name", "table"),
+					resource.TestCheckResourceAttrPair(resourceName, "principal", "data.aws_iam_session_context.current", "issuer_arn"),
+				),
+			},
+			/* TODO
+			{
+				ResourceName:                         resourceName,
+				ImportStateIdFunc:                    testAccCatalogTableOptimizerStateIDFunc(resourceName),
+				ImportStateVerifyIdentifierAttribute: names.AttrTableName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+			},
+			*/
 		},
 	})
 }
@@ -248,18 +291,6 @@ func testAccPreCheck(ctx context.Context, t *testing.T) {
 	}
 }
 
-/*
-func testAccCheckLakeFormationOptInNotRecreated(before, after *lakeformation.ListLakeFormationOptInsOutput) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if before, after := aws.ToString(before.LakeFormationOptInId), aws.ToString(after.LakeFormationOptInId); before != after {
-			return create.Error(names.LakeFormation, create.ErrActionCheckingNotRecreated, tflakeformation.ResNameLakeFormationOptIn, aws.ToString(before.LakeFormationOptInId), errors.New("recreated"))
-		}
-
-		return nil
-	}
-}
-*/
-
 func testAccLakeFormationOptInConfig_basic(rName, database string) string {
 	/* TODO
 	resource "aws_lakeformation_data_lake_settings" "test" {
@@ -287,4 +318,56 @@ resource "aws_lakeformation_lake_formation_opt_in" "test" {
   depends_on = [aws_glue_catalog_database.test]
 }
 `, database)
+}
+
+func testAccLakeFormationOptInConfig_table(rName, database string, table string) string {
+	/* TODO
+	resource "aws_lakeformation_data_lake_settings" "test" {
+		admins = [data.aws_iam_session_context.current.issuer_arn]
+	}
+	depends_on = [aws_lakeformation_data_lake_settings.test, aws_glue_catalog_database.test]
+
+	*/
+	return fmt.Sprintf(`
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_session_context" "current" {
+  arn = data.aws_caller_identity.current.arn
+}
+
+resource "aws_glue_catalog_database" "test" {
+  name = %[1]q
+}
+
+resource "aws_glue_catalog_table" "test" {
+  name          = %[2]q
+  database_name = aws_glue_catalog_database.test.name
+
+  storage_descriptor {
+    columns {
+      name = "event"
+      type = "string"
+    }
+
+    columns {
+      name = "timestamp"
+      type = "date"
+    }
+
+    columns {
+      name = "value"
+      type = "double"
+    }
+  }
+}
+
+resource "aws_lakeformation_lake_formation_opt_in" "test" {
+  principal = data.aws_iam_session_context.current.issuer_arn
+ 	table {
+      database_name = "%[1]s"
+      name = "%[2]s"
+  }
+  depends_on = [aws_glue_catalog_database.test]
+}
+`, database, table)
 }

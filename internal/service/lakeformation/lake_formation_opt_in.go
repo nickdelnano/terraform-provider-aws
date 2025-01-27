@@ -243,6 +243,7 @@ func (r *resourceLakeFormationOptIn) Create(ctx context.Context, req resource.Cr
 - other combinations like opt-in for a role (is this allowed?)
 TODO - the below shouldn't be a public function. test.go notes to add to exports.go
 */
+
 func FindLFOptInByID(ctx context.Context, conn *lakeformation.Client, principal *awstypes.DataLakePrincipal, resource *awstypes.Resource) (*lakeformation.ListLakeFormationOptInsOutput, error) {
 	in := &lakeformation.ListLakeFormationOptInsInput{
 		Principal: principal,
@@ -265,7 +266,6 @@ func FindLFOptInByID(ctx context.Context, conn *lakeformation.Client, principal 
 	// TODO assert size one? return only one result?
 	return out, nil
 }
-
 func (r *resourceLakeFormationOptIn) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// TIP: ==== RESOURCE READ ====
 	// Generally, the Read function should do the following things. Make
